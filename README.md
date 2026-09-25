@@ -48,7 +48,9 @@ PYTHONPATH=src python examples/metasurface_2d_tez.py
 
 More examples are in [`examples/`](examples), and focused guides are in
 [`docs/`](docs), including GPU validation, material fitting, oblique incidence
-and JAX profiling.
+and JAX profiling. Material constants can also be loaded from versioned JSON or
+HDF5 files; see [`docs/material_files.md`](docs/material_files.md) for the exact
+field and dataset layout.
 
 ## Testing
 

@@ -1,0 +1,30 @@
+{
+  "schema": "fdtdz.materials",
+  "schema_version": 1,
+  "units": "normalized",
+  "materials": [
+    {
+      "name": "air",
+      "model": "lossless",
+      "eps_r": 1.0
+    },
+    {
+      "name": "metal",
+      "model": "multipole",
+      "eps_inf": 1.0,
+      "poles": [
+        {
+          "model": "drude",
+          "plasma_frequency": 0.55,
+          "collision_frequency": 0.025
+        },
+        {
+          "model": "lorentz",
+          "delta_eps": 0.8,
+          "omega_0": 0.42,
+          "damping": 0.025
+        }
+      ]
+    }
+  ]
+}

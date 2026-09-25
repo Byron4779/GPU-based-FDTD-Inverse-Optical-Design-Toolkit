@@ -57,6 +57,8 @@ __all__ = [
 	"PermittivityTable",
 	"PassiveFitResult",
 	"read_material_table",
+	"read_material",
+	"read_materials",
 	"fit_passive_material",
 	"RefinementStudy3D",
 	"ParameterSweep3D",
@@ -173,6 +175,9 @@ __all__ = [
 ]
 
 def __getattr__(name: str):
+	if name in {"read_material", "read_materials"}:
+		from . import material_io
+		return getattr(material_io, name)
 	if name in {"PermittivityTable", "PassiveFitResult", "read_material_table",
 			"fit_passive_material"}:
 		from . import material_fitting
