@@ -11,6 +11,9 @@ metasurface examples.
 - CUDA custom calls for the original high-throughput solver.
 - Pure-Python NumPy/JAX ADE solvers for portable CPU and GPU workflows.
 - 2D TEz/TMz and 3D simulations, material fitting and physical-unit tools.
+- Adjoint-method inverse design: density/level-set optimization with
+  transmission, band-limited, and mode-overlap objectives (see
+  [`docs/inverse_design.md`](docs/inverse_design.md)).
 - Examples, regression tests, package checks and GitHub Actions CI.
 
 ## Requirements
@@ -44,6 +47,13 @@ Run an example directly from a source checkout:
 
 ```bash
 PYTHONPATH=src python examples/metasurface_2d_tez.py
+```
+
+For a differentiable inverse-design demo (adjoint gradient + Adam
+optimization of a metasurface to maximize transmission):
+
+```bash
+PYTHONPATH=src python examples/inverse_design_2d.py
 ```
 
 More examples are in [`examples/`](examples), and focused guides are in

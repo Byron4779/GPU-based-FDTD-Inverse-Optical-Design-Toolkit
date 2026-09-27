@@ -172,6 +172,20 @@ __all__ = [
 	"yee_ade_2d_step",
 	"yee_ade_2d_tez_step",
 	"yee_ade_3d_step",
+	"DesignResult",
+	"InverseDesign2D",
+	"adjoint_gradient",
+	"band_power",
+	"build_design_grid",
+	"field_overlap",
+	"interpolate_coefficients",
+	"level_set_density",
+	"make_objective",
+	"project_density",
+	"run_inverse_design",
+	"sigmoid_projection",
+	"time_integrated_power",
+	"zero_state_2d",
 ]
 
 def __getattr__(name: str):
@@ -331,6 +345,15 @@ def __getattr__(name: str):
 	}:
 		from . import yee_ade_2d
 		return getattr(yee_ade_2d, name)
+	if name in {
+		"DesignResult", "InverseDesign2D", "adjoint_gradient", "band_power",
+		"build_design_grid", "field_overlap", "interpolate_coefficients",
+		"level_set_density", "make_objective", "project_density",
+		"run_inverse_design", "sigmoid_projection", "time_integrated_power",
+		"zero_state_2d"
+	}:
+		from . import inverse_design
+		return getattr(inverse_design, name)
 	raise AttributeError(f"module {__name__} has no attribute {name}")
 
 def __dir__():
