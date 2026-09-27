@@ -245,7 +245,9 @@ def field_overlap(field, target, dt, frequency, bandwidth=None):
   denominator = (
       jnp.sum(jnp.abs(field_frequency)**2) *
       jnp.sum(jnp.abs(target)**2))
-  return numerator / (denominator + 1e-12)
+  # A float32-safe floor avoids division by zero, and clipping guarantees the
+  # documented [0, 1] range in the presence of float32 rounding.
+  return jnp.clip(numerator / (denominator + 1e-6), 0.0, 1.0)
 
 
 # ---------------------------------------------------------------------------
