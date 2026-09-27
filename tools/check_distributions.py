@@ -27,7 +27,6 @@ def check(directory, pure_python=False):
       "examples/validate_jax_gpu_3d.py",
       "tools/run_wsl_gpu.py",
       "tools/validate_gpu_environment.py", "docs/gpu_validation.md",
-      "complex-permittivity-metasurface-2d.ipynb",
       "complex-permittivity-metasurface-3d.ipynb",
   }
   if missing := required - source_names:
