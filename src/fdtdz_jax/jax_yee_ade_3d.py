@@ -448,10 +448,12 @@ def simulate_jax_yee_ade_3d_plane_probes_with_frequency_fields(
     electric_time = next_state.step * grid.dt
     magnetic_time = (next_state.step - 0.5) * grid.dt
     scale = grid.dt * frequency_weights[time_index]
-    electric_phase = scale * jnp.exp(
-        2j * jnp.pi * frequencies * electric_time)
-    magnetic_phase = scale * jnp.exp(
-        2j * jnp.pi * frequencies * magnetic_time)
+    electric_phase = jnp.asarray(
+        scale * jnp.exp(2j * jnp.pi * frequencies * electric_time),
+        dtype=complex_dtype)
+    magnetic_phase = jnp.asarray(
+        scale * jnp.exp(2j * jnp.pi * frequencies * magnetic_time),
+        dtype=complex_dtype)
     phase_shape = (num_frequencies,) + (1,) * 4
     frequency_electric, frequency_magnetic, frequency_displacement = (
         current_frequencies)
