@@ -170,7 +170,7 @@ def fdtdz(
 
   ``fdtd-z`` targets nanophotonic applications with a heavy prioritization on
   simulation throughput, as insufficient throughput is currently the
-  bottleneck in many workflows (such as nanophotonic inverse design). As such,
+  bottleneck in many workflows. As such,
   the flexibility and features of the engine have been kept to a bare
   minimum in the name of performance:
 

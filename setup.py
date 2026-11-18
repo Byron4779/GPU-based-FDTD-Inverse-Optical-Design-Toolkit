@@ -82,7 +82,10 @@ setup(
     name="fdtdz",
     author="Jesse Lu",
     author_email="jesselu@spinsphotonics.com",
-    url="https://github.com/spinsphotonics/fdtdz",
+    url=(
+        "https://github.com/Byron4779/"
+        "GPU-based-FDTD-Inverse-Optical-Design-Toolkit"
+    ),
     license="MIT",
     description=("Fast, scalable, and free photonic simulation"),
     long_description=read("README.md"),

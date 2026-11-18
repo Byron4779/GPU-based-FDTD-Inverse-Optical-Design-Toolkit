@@ -8,3 +8,6 @@ write_to = "src/fdtdz_jax/fdtdz_jax_version.py"
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+markers = [
+  "slow: slow end-to-end inverse-design optimization tests",
+]

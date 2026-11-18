@@ -1,115 +1,110 @@
-"""2D TMz transmission inverse-design example.
+"""2D TMz inverse-design example (Meep-aligned ``fdtdz_jax.inverse_design``).
 
-This example optimizes the density of a metasurface unit cell to maximize the
-power transmitted through it for a Huygens line-source pulse.  The design
-region starts as a uniform, partly blocking dielectric slab; adjoint gradients
-(``jax.grad`` through the FDTD time loop) drive an Adam update toward a
-structure that transmits more light.
+Maximizes the time-integrated transmission-probe energy through a lossless
+design slab using scipy L-BFGS-B with JAX-computed gradients.
 
-Run from a source checkout with::
+Run from the repository root::
 
-    PYTHONPATH=src python examples/inverse_design_2d.py
-
-An optional ``--plot`` flag writes ``inverse_design_2d.png`` if matplotlib is
-available.
+    python examples/inverse_design_2d.py
 """
 
-import argparse
-import os
+import sys
+from pathlib import Path
 
+import jax
+
+jax.config.update("jax_enable_x64", True)
+
+import jax.numpy as jnp
 import numpy as np
 
-from fdtdz_jax.inverse_design import (
-    InverseDesign2D,
-    make_objective,
-    run_inverse_design,
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+
+from fdtdz_jax import (  # noqa: E402
+    DesignParameters,
+    DesignRegion,
+    InverseDesignProblem,
+    ProbeTrace,
+    minimize_lbfgsb,
 )
-from fdtdz_jax.materials import Lossless
-from fdtdz_jax.metasurface_2d import gaussian_sine_pulse
-from fdtdz_jax.metasurface_2d import huygens_current_waveforms
-from fdtdz_jax.yee_ade_2d import prepare_y_cpml
+from fdtdz_jax.materials import Lossless  # noqa: E402
+from fdtdz_jax.metasurface_2d import (  # noqa: E402
+    gaussian_sine_pulse,
+    huygens_current_waveforms,
+)
+from fdtdz_jax.yee_ade_2d import prepare_material_grid_2d  # noqa: E402
+from fdtdz_jax.yee_ade_2d import prepare_y_cpml  # noqa: E402
 
 
-def build_problem(nx=32, ny=64, num_steps=200, design_eps=9.0,
-                  frequency=0.2, dtype=np.float32):
-  """Build a transmission problem with the design slab clear of the CPML."""
-  dx = dy = 1.0
-  dt = 0.5
-  waveform = gaussian_sine_pulse(
-      num_steps, dt, center_time=0.15 * num_steps, width=0.06 * num_steps,
-      frequency=frequency, dtype=dtype)
-  electric, magnetic = huygens_current_waveforms(
-      waveform, direction=1, wave_impedance=1.0, dtype=dtype)
-  cpml = prepare_y_cpml((nx, ny), width=12, dt=dt, dy=dy, dtype=dtype)
-  design_mask = np.zeros((nx, ny), dtype=bool)
-  design_mask[:, 28:36] = True  # a slab of cells in the middle of the cell
-  return InverseDesign2D.from_materials(
-      (nx, ny), design_mask, Lossless(1.0), Lossless(design_eps), dt, dx, dy,
-      electric, magnetic, np.ones(nx, dtype=dtype),
-      source_y=14, reflection_y=18, transmission_y=46, cpml=cpml,
-      dtype=dtype), frequency
+def main() -> None:
+    nx, ny = 32, 64
+    dt, dx, dy = 0.5, 1.0, 1.0
+    eps_min, eps_max = 1.0, 9.0
+    cpml_width = 8
 
+    cpml = prepare_y_cpml((nx, ny), cpml_width, dt, dy, dtype=np.float64)
+    grid = prepare_material_grid_2d(
+        [Lossless(eps_min)],
+        np.zeros((nx, ny), dtype=int),
+        dt,
+        dx,
+        dy,
+        dtype=np.float64,
+        y_cpml=cpml,
+    )
 
-def main():
-  parser = argparse.ArgumentParser(description=__doc__)
-  parser.add_argument("--iterations", type=int, default=150)
-  parser.add_argument("--learning-rate", type=float, default=0.1)
-  parser.add_argument("--plot", action="store_true")
-  args = parser.parse_args()
+    num_steps = 240
+    waveform = gaussian_sine_pulse(
+        num_steps, dt, center_time=20.0, width=10.0, frequency=0.3,
+        dtype=np.float64,
+    )
+    electric, magnetic = huygens_current_waveforms(
+        waveform, direction=1, wave_impedance=1.0, dtype=np.float64
+    )
 
-  problem, frequency = build_problem()
-  rho0 = np.zeros(problem.shape, dtype=np.float32)
-  rho0[problem.design_mask] = 0.5
+    grid_size = (12, 8)
+    params = DesignParameters(
+        grid_size=grid_size,
+        medium1=eps_min,
+        medium2=eps_max,
+        weights=np.full(grid_size[0] * grid_size[1], 0.5),
+        beta=2.0,
+        p=3.0,
+        filter_type="conic",
+        radius=1.5,
+    )
+    region = DesignRegion(
+        params, x0=10, x1=10 + grid_size[0], y0=28, y1=28 + grid_size[1]
+    )
+    problem = InverseDesignProblem(
+        grid,
+        region,
+        electric,
+        magnetic,
+        np.ones(nx, dtype=np.float64),
+        source_y=14,
+        reflection_probe_y=18,
+        transmission_probe_y=46,
+        objective_arguments=[ProbeTrace(probe="transmission")],
+        objective_functions=[lambda t: -jnp.mean(jnp.square(t))],
+    )
 
-  # Band-limited transmission at the source frequency (wavelength-selective).
-  band = make_objective(
-      problem, penalty=3.0, mode="transmission",
-      frequency_min=0.8 * frequency, frequency_max=1.2 * frequency)
+    f0 = problem(need_value=True, need_gradient=False)[0]
+    result = minimize_lbfgsb(
+        problem, np.full(grid_size[0] * grid_size[1], 0.5), maxiter=30
+    )
+    f1 = problem(need_value=True, need_gradient=False)[0]
 
-  def evaluate(density):
-    return float(band(density))
+    density = problem.design_regions[0].design_parameters.weights.reshape(
+        grid_size
+    )
+    np.save("inverse_design_2d_density.npy", density)
 
-  empty = evaluate(np.zeros(problem.shape, dtype=np.float32))
-  initial = evaluate(rho0.astype(np.float32))
-  print(f"band transmission @ f={frequency}:")
-  print(f"  vacuum        : {empty:.4e}")
-  print(f"  initial rho=0.5: {initial:.4e}")
-
-  result = run_inverse_design(
-      problem, rho0, iterations=args.iterations,
-      learning_rate=args.learning_rate, penalty=3.0, mode="transmission",
-      maximize=True, binarize=False,
-      frequency_min=0.8 * frequency, frequency_max=1.2 * frequency)
-
-  final = evaluate(result.density.astype(np.float32))
-  print(f"  optimized     : {final:.4e}")
-  print(f"  improvement   : {final / max(initial, 1e-30):.2f}x over initial")
-  print(f"  objective     : {result.objective_history[0]:.4e} -> "
-        f"{result.objective_history[-1]:.4e}")
-
-  if args.plot:
-    try:
-      import matplotlib
-      matplotlib.use("Agg")
-      import matplotlib.pyplot as plt
-    except ImportError:
-      print("matplotlib is not installed; skipping plot.")
-      return
-    figure, axes = plt.subplots(1, 2, figsize=(10, 4))
-    axes[0].imshow(result.density.T, origin="lower", cmap="viridis",
-                   vmin=0.0, vmax=1.0, aspect="auto")
-    axes[0].set_title("Optimized density")
-    axes[0].set_xlabel("x")
-    axes[0].set_ylabel("y (propagation)")
-    axes[1].plot(result.objective_history)
-    axes[1].set_title("Objective history")
-    axes[1].set_xlabel("iteration")
-    axes[1].set_ylabel("band transmission")
-    figure.tight_layout()
-    out = os.path.join(os.path.dirname(__file__), "inverse_design_2d.png")
-    figure.savefig(out, dpi=120)
-    print(f"wrote {out}")
+    print(f"initial objective (negative transmission energy): {f0:.6f}")
+    print(f"final   objective (negative transmission energy): {f1:.6f}")
+    print(f"L-BFGS-B iterations: {result.nit}, converged: {result.success}")
+    print("optimized density saved to inverse_design_2d_density.npy")
 
 
 if __name__ == "__main__":
-  main()
+    main()
