@@ -1,10 +1,10 @@
-# FDTDZ：GPU 加速的 FDTD 与光学逆向设计工具包
+# IMAGINARY-FDTDZ：GPU 加速的 FDTD 与光学逆向设计工具包
 
 [![Quality](https://github.com/Byron4779/GPU-based-FDTD-Inverse-Optical-Design-Toolkit/actions/workflows/quality.yml/badge.svg)](https://github.com/Byron4779/GPU-based-FDTD-Inverse-Optical-Design-Toolkit/actions/workflows/quality.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](pyproject.toml)
 
-FDTDZ 是一个面向光子学、超表面与纳米光学研究的开源时域有限差分（FDTD）
+IMAGINARY-FDTDZ （暂命名）是一个面向光子学、超表面与纳米光学研究的开源时域有限差分（FDTD）
 工具包。项目保留原始的 CUDA 吞吐量路线，同时提供基于 NumPy/JAX 的 ADE
 （辅助微分方程）求解器，用于二维和三维电磁正向仿真、色散材料建模、
 散射谱分析及可微逆向设计。
@@ -100,8 +100,7 @@ ADE**。接口采用 `DesignParameters`、`DesignRegion`、`ObjectiveQuantity`
 - `ProbeEnergy`：窗口内探针的均方幅值。
 - `SingleFrequencyTransmission`：用 Hann 窗 DFT 和空单元参考场归一化的
   单频复透射系数 `t(f0)`。
-- `SingleFrequencyTransmission` 配合 `phase_180_constraints`：在复透射相位
-  达到 180°（模 `2*pi`）及最小幅值/功率约束下最大化 `|t(f0)|^2`。
+- `phase_180_constraints`：控制复透射相位差达到 180°。
 - `minimize_lbfgsb`：无约束可微目标。
 - `minimize_slsqp`、`minimize_slsqp_beta_continuation`：含物理约束和
   设计域约束的连续密度优化。
@@ -116,7 +115,8 @@ ADE**。接口采用 `DesignParameters`、`DesignRegion`、`ObjectiveQuantity`
 | 全周期无损耗连续密度 | 固定 `f0` 相位 180°，最大化 `|t(f0)|^2` | `SLSQP` 测试可满足相位和约束容差，并相对可行初值提升透射率 |
 | 800 nm 金连续松弛 | 单频 180° 相位、幅值、透射功率、体积和有效厚度联合约束 | 30% 金体积上限的案例满足该连续松弛的全部硬约束；20% 和 40% 案例失败，不能视为通用可解性 |
 | 800 nm 金严格二值设计 | 与上相同的目标，但每次正向仿真只使用 `{0,1}` 端点材料 | 优化器可以严格执行二值和独立验证，但默认案例尚未通过目标容差，当前**未收敛为有效器件** |
-| 多频/宽带相位、三维逆设计、鲁棒拓扑优化 | — | 尚未实现稳定收敛流程 |
+
+注：和tidy3d结果比较（不在本项目内），现有成熟软件依旧无法收敛为有效器件，所以是算例的问题
 
 严格二值 800 nm 金代理梯度实验的实测结果如下。表中失败结果被保留，用于区分
 “优化器正在工作”和“已经找到合格器件”：
@@ -252,7 +252,7 @@ CUDA Toolkit 和 GPU 型号。相关说明见
 
 ## 当前限制
 
-- 逆向设计目前只覆盖二维 TMz；三维逆设计和三维多偏振目标仍在规划中。
+- 逆向设计目前只覆盖二维 TMz。
 - 宽带同时约束相位与透射、多目标 Pareto 优化、鲁棒性和加工公差优化尚未
   形成稳定工作流。
 - 严格二值优化使用直线估计器生成候选方向，真实有限差分仿真仍是最终判据；
